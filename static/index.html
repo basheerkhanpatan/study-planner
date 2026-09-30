@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Exam ER — Academic Triage & Rescue System</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f6b66">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{
+  --bg:#f3f7f6;--ink:#12302e;--line:#d3e0dd;--red:#d64545;--amber:#e5a02d;
+  --green:#2f9e6b;--teal:#0f6b66;--teal-dark:#0a4c49;--card-bg:#ffffff;
+  --pulse-speed: 2s;
+}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.5 "Segoe UI",-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(135deg, var(--teal), var(--teal-dark));color:#fff;padding:22px 28px;box-shadow:0 3px 12px rgba(15,107,102,0.18)}
+.header-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+h1{margin:0;font-size:26px;display:flex;align-items:center;gap:10px}
+.badge{background:rgba(255,255,255,0.2);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;letter-spacing:0.5px}
+header p{margin:6px 0 0;opacity:.9;font-size:14px}
+.demo-btn{background:#fff;color:var(--teal-dark);border:0;padding:8px 16px;border-radius:8px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:transform .1s, background .15s}
+.demo-btn:hover{background:#e8f4f2}
+
+main{max-width:960px;margin:0 auto;padding:24px 20px;display:grid;gap:22px}
+section{background:var(--card-bg);border:1px solid var(--line);border-radius:12px;padding:20px;box-shadow:0 2px 8px rgba(0,0,0,0.02)}
+h2{margin:0 0 14px;font-size:18px;display:flex;align-items:center;gap:8px}
+
+.row{display:flex;flex-wrap:wrap;gap:14px;align-items:end}
+label{display:grid;gap:6px;font-size:13px;font-weight:600;color:#355350}
+input,select{padding:9px 12px;border:1px solid var(--line);border-radius:8px;font:inherit;background:#fff}
+input:focus,select:focus{outline:2px solid var(--teal);border-color:transparent}
+button{padding:9px 18px;border:0;border-radius:8px;background:var(--teal);color:#fff;font:inherit;font-weight:600;cursor:pointer;transition:all .15s}
+button:hover{opacity:.93}
+button.ghost{background:#e6eeec;color:var(--ink);padding:6px 12px;font-size:13px}
+button.ghost:hover{background:#d5e2df}
+button.danger{background:#fee2e2;color:var(--red);padding:6px 12px;font-size:13px}
+button.danger:hover{background:#fecaca}
+
+.panic-container{display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center}
+.panic-num-wrap{text-align:center;min-width:110px;padding:12px;border-radius:10px;background:#f8faf9;border:1px solid var(--line)}
+.panic-num{font-size:42px;font-weight:800;line-height:1}
+.panic-label{font-size:12px;text-transform:uppercase;font-weight:700;letter-spacing:1px;margin-top:4px}
+.bar-wrap{display:grid;gap:8px}
+.bar{height:16px;background:#e6eeec;border-radius:8px;overflow:hidden;position:relative}
+.bar i{display:block;height:100%;transition:width .4s ease, background-color .3s}
+
+/* ECG pulse monitor */
+.ecg-box{background:#0e1e1d;border-radius:10px;padding:10px 16px;margin-top:14px;display:flex;align-items:center;gap:14px;color:#a4f0d8;font-family:monospace;font-size:13px}
+.ecg-wave{flex:1;height:32px;overflow:hidden;position:relative}
+.ecg-svg{width:200%;height:100%;animation:ecgSlide var(--pulse-speed) linear infinite;stroke:#2f9e6b;stroke-width:2;fill:none}
+@keyframes ecgSlide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* Patient Cards */
+.card{display:flex;flex-direction:column;gap:10px;padding:14px 16px;border:1px solid var(--line);border-left:8px solid var(--green);border-radius:10px;margin-bottom:12px;transition:box-shadow .15s}
+.card:hover{box-shadow:0 4px 12px rgba(0,0,0,0.04)}
+.card.Critical{border-left-color:var(--red);background:#fff9f9}
+.card.Serious{border-left-color:var(--amber);background:#fffdf9}
+.card.Stable{border-left-color:var(--green);background:#fafffd}
+.card-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.card b{font-size:18px}
+.meta{font-size:13px;color:#4a6764}
+.tag{font-weight:700;padding:2px 8px;border-radius:4px;font-size:12px;text-transform:uppercase}
+.Critical .tag{color:var(--red);background:#fee2e2}
+.Serious .tag{color:#925d07;background:#fef3c7}
+.Stable .tag{color:var(--green);background:#d1fae5}
+
+/* Prescription Drawer */
+.rx-box{display:none;background:#ffffff;border:1px dashed var(--line);border-radius:8px;padding:14px;margin-top:8px;font-size:13px}
+.rx-box.active{display:block;animation:fadeDown .2s ease}
+.rx-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:8px}
+.rx-item{background:#f8faf9;padding:10px;border-radius:6px;border-left:3px solid var(--teal)}
+.rx-item b{display:block;margin-bottom:3px;color:var(--teal-dark)}
+
+/* ICU Crash Cart Timer */
+.icu-box{display:flex;align-items:center;justify-content:space-between;background:linear-gradient(90deg, #1b3836, #0e2423);color:#fff;padding:14px 18px;border-radius:10px;margin-bottom:16px;flex-wrap:wrap;gap:12px}
+.icu-timer{font-family:monospace;font-size:32px;font-weight:700;letter-spacing:2px;color:#a4f0d8}
+
+/* 7-day schedule */
+.day{padding:10px 0;border-top:1px solid var(--line);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.day-label{min-width:110px;font-weight:700;color:var(--teal-dark)}
+.chip{display:inline-flex;align-items:center;margin:3px 6px 3px 0;padding:4px 12px;border-radius:14px;background:#e6eeec;font-size:13px;font-weight:600}
+.chip span{font-weight:400;color:#52706d;margin-left:4px}
+.empty{color:#6c8a87;font-style:italic;padding:12px 0}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-top">
+    <div>
+      <h1>🚨 Exam ER <span class="badge">ACADEMIC TRIAGE</span></h1>
+      <p>Find out which exam needs emergency treatment first. Prioritize survival.</p>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button class="demo-btn" id="loadDemo">⚡ Load Demo Trauma Ward</button>
+      <button class="ghost" id="clearAll" style="background:rgba(255,255,255,0.15);color:#fff">Reset Ward</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- ICU Emergency Focus Timer -->
+  <div class="icu-box" id="icuWidget">
+    <div>
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;opacity:0.8">ICU Emergency Crash Cart</div>
+      <div style="font-weight:600" id="icuTarget">Stabilizing: No critical patient</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <div class="icu-timer" id="icuTimer">25:00</div>
+      <button id="icuBtn" style="background:#2f9e6b;padding:8px 16px">Start Session</button>
+      <button class="ghost" id="icuReset" style="background:rgba(255,255,255,0.2);color:#fff;padding:8px 12px">Reset</button>
+    </div>
+  </div>
+
+  <section>
+    <h2>🏥 Admit New Patient (Subject)</h2>
+    <div class="row">
+      <label>Subject / Exam Name <input id="name" placeholder="e.g. Data Structures" style="min-width:200px"></label>
+      <label>Exam Date <input id="date" type="date"></label>
+      <label>Confidence: <span id="cv">3</span>/5 <input id="conf" type="range" min="1" max="5" value="3"></label>
+      <button id="add">Admit Subject</button>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <label>Daily Study Capacity (Hours/Day): 
+        <input id="hours" type="number" min="1" max="16" step="0.5" style="width:110px">
+      </label>
+      <span class="meta" style="margin-bottom:6px">System dynamically recalculates dosage across all admitted exams.</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>📊 Triage Vital Monitor & Panic Index</h2>
+    <div class="panic-container">
+      <div class="panic-num-wrap">
+        <div class="panic-num" id="pnum">0</div>
+        <div class="panic-label" id="plbl">STABLE</div>
+      </div>
+      <div class="bar-wrap">
+        <div class="bar"><i id="pbar"></i></div>
+        <div class="meta" id="pmsg" style="font-size:14px;font-weight:500">Admit a subject to run diagnostic triage.</div>
+      </div>
+    </div>
+
+    <!-- ECG Visualizer -->
+    <div class="ecg-box">
+      <span style="font-weight:bold" id="bpmStatus">PULSE: 72 BPM</span>
+      <div class="ecg-wave">
+        <svg class="ecg-svg" id="ecgSvg" viewBox="0 0 600 40" preserveAspectRatio="none">
+          <path d="M0,20 L80,20 L90,5 L95,35 L100,10 L105,25 L110,20 L250,20 L380,20 L390,5 L395,35 L400,10 L405,25 L410,20 L550,20 L600,20" />
+        </svg>
+      </div>
+      <span id="ecgAlert">WARD NORMAL</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>🩺 Patient Triage Board (Prioritized by Urgency)</h2>
+    <div id="board"></div>
+  </section>
+
+  <section>
+    <h2>📅 7-Day Emergency Rescue Schedule</h2>
+    <div id="plan"></div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let subjects = [], hours = 4;
+
+let clientId = localStorage.getItem('er-client');
+if (!clientId) {
+  clientId = Date.now() + '-' + Math.random().toString(36).slice(2);
+  localStorage.setItem('er-client', clientId);
+}
+
+async function api(path, method = 'GET', body) {
+  const res = await fetch('/api' + path, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-Client': clientId },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Request failed');
+  return res.status === 204 ? null : res.json();
+}
+
+async function load() {
+  try {
+    subjects = await api('/subjects');
+    hours = (await api('/settings')).hours;
+    $('hours').value = hours;
+  } catch (e) {
+    console.warn('Backend unavailable, falling back to localStorage:', e);
+    subjects = JSON.parse(localStorage.getItem('er-subjects') || '[]');
+    hours = parseFloat(localStorage.getItem('er-hours')) || 4;
+    $('hours').value = hours;
+  }
+  render();
+}
+
+function daysLeft(s, offset = 0) {
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  return Math.round((new Date(s.date + 'T00:00') - t) / 864e5) - offset;
+}
+const urgency = (s, offset = 0) => (6 - s.conf) / Math.max(1, daysLeft(s, offset));
+const level = u => u > 1 ? 'Critical' : u > 0.4 ? 'Serious' : 'Stable';
+
+function plan(offset) {
+  const active = subjects.filter(s => daysLeft(s, offset) >= 0).map(s => ({ ...s, u: urgency(s, offset) }));
+  const total = active.reduce((sum, s) => sum + s.u, 0);
+  if (!total) return [];
+  return active.map(s => ({ name: s.name, hours: +(hours * s.u / total).toFixed(1) }));
+}
+
+function getPrescription(name, lv, conf, days) {
+  if (lv === 'Critical') {
+    return {
+      triage: 'Code Red — Resuscitation Required',
+      step1: 'Emergency Triage: Stop textbook reading. Solve ONLY past 3-5 years high-frequency questions.',
+      step2: 'Active Stabilization: 3 cycles of 45-min Pomodoro drills on formula sheets & core diagrams.',
+      caution: 'Strict Contraindication: Do NOT open new unstudied chapters. Protect high-probability marks.'
+    };
+  } else if (lv === 'Serious') {
+    return {
+      triage: 'Code Yellow — High Risk Ward',
+      step1: 'Target Weak Quadrants: Spend first 60% of time on self-assessed low confidence topics.',
+      step2: 'Rapid Flashcards: Active recall testing without looking at solutions.',
+      caution: 'Caution: Avoid passive highlight-reading. Convert notes to 1-page cheat sheets.'
+    };
+  }
+  return {
+    triage: 'Code Green — Observation & Maintenance',
+    step1: 'Maintenance Dose: 1-hour timed mock test every 48 hours to retain peak performance.',
+    step2: 'Polish Edge Cases: Review exception cases and tricky multiple-choice questions.',
+    caution: 'Advice: Do not abandon revision completely; maintain steady momentum.'
+  };
+}
+
+function render() {
+  const upcoming = subjects.filter(s => daysLeft(s) >= 0);
+  const ranked = upcoming.map(s => ({ ...s, u: urgency(s), d: daysLeft(s) })).sort((a, b) => b.u - a.u);
+  const todayPlan = plan(0);
+
+  // Update ICU Crash Cart target with the most critical subject
+  const topCritical = ranked[0];
+  if (topCritical) {
+    const lv = level(topCritical.u);
+    $('icuTarget').innerHTML = `Stabilizing: <b style="color:#a4f0d8">${esc(topCritical.name)}</b> (${lv}, Exam in ${topCritical.d === 0 ? 'Today' : topCritical.d + 'd'})`;
+  } else {
+    $('icuTarget').textContent = 'Stabilizing: No critical patient currently admitted';
+  }
+
+  $('board').innerHTML = ranked.length ? ranked.map(s => {
+    const lv = level(s.u);
+    const h = (todayPlan.find(p => p.name === s.name) || {}).hours || 0;
+    const rx = getPrescription(s.name, lv, s.conf, s.d);
+    return `
+      <div class="card ${lv}">
+        <div class="card-header">
+          <div>
+            <b>${esc(s.name)}</b>
+            <div class="meta">
+              ${s.d === 0 ? '⚠️ <b>EXAM TODAY</b>' : '⏱️ <b>' + s.d + ' day' + (s.d > 1 ? 's' : '') + ' left</b>'} • 
+              Confidence: <b>${s.conf}/5</b> • 
+              Prescribed dosage: <b>${h} hrs today</b>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <span class="tag">${lv}</span>
+            <button class="ghost" onclick="toggleRx('rx-${s.id}')">🩺 Rx Plan</button>
+            <button class="danger" data-del="${s.id}" title="Discharge patient">Discharge</button>
+          </div>
+        </div>
+        <div class="rx-box" id="rx-${s.id}">
+          <div style="font-weight:700;color:var(--teal-dark);margin-bottom:6px">📋 Emergency Clinical Protocol: ${rx.triage}</div>
+          <div class="rx-grid">
+            <div class="rx-item"><b>1. First 2-Hour Action</b>${rx.step1}</div>
+            <div class="rx-item"><b>2. Retention Strategy</b>${rx.step2}</div>
+            <div class="rx-item" style="border-left-color:var(--red)"><b>⚠️ Contraindication</b>${rx.caution}</div>
+          </div>
+        </div>
+      </div>`;
+  }).join('') : '<p class="empty">No patients admitted yet. Add a subject above or click "Load Demo Trauma Ward".</p>';
+
+  // Panic Score & ECG Logic
+  const panic = ranked.length ? Math.round(100 * ranked.reduce((sum, s) => sum + Math.min(1, s.u / 1.5), 0) / ranked.length) : 0;
+  $('pnum').textContent = panic;
+  const bar = $('pbar');
+  bar.style.width = panic + '%';
+  
+  const ecgSvg = $('ecgSvg');
+  const bpm = $('bpmStatus');
+  const ecgAlert = $('ecgAlert');
+  const root = document.documentElement;
+
+  if (panic > 66) {
+    bar.style.background = 'var(--red)';
+    $('plbl').textContent = 'CODE RED';
+    $('plbl').style.color = 'var(--red)';
+    $('pmsg').innerHTML = '🚨 <b>Critical Ward!</b> Start intensive rescue on <b>' + esc(ranked[0].name) + '</b> immediately.';
+    ecgSvg.style.stroke = 'var(--red)';
+    root.style.setProperty('--pulse-speed', '0.75s');
+    bpm.textContent = 'PULSE: 135 BPM (CRITICAL)';
+    bpm.style.color = 'var(--red)';
+    ecgAlert.textContent = '⚠️ WARD IN CRISIS';
+    ecgAlert.style.color = 'var(--red)';
+  } else if (panic > 33) {
+    bar.style.background = 'var(--amber)';
+    $('plbl').textContent = 'SERIOUS';
+    $('plbl').style.color = 'var(--amber)';
+    $('pmsg').innerHTML = '⚠️ <b>Manageable Crisis:</b> Strictly follow the daily hour allotment.';
+    ecgSvg.style.stroke = 'var(--amber)';
+    root.style.setProperty('--pulse-speed', '1.3s');
+    bpm.textContent = 'PULSE: 95 BPM (ELEVATED)';
+    bpm.style.color = 'var(--amber)';
+    ecgAlert.textContent = 'MONITOR CLOSELY';
+    ecgAlert.style.color = 'var(--amber)';
+  } else {
+    bar.style.background = 'var(--green)';
+    $('plbl').textContent = ranked.length ? 'STABLE' : 'NORMAL';
+    $('plbl').style.color = 'var(--green)';
+    $('pmsg').textContent = ranked.length ? 'Patient condition stable. Maintain current treatment schedule.' : 'Ward clear. Admit a subject to begin.';
+    ecgSvg.style.stroke = 'var(--green)';
+    root.style.setProperty('--pulse-speed', '2.2s');
+    bpm.textContent = 'PULSE: 70 BPM (NORMAL)';
+    bpm.style.color = '#a4f0d8';
+    ecgAlert.textContent = 'WARD NORMAL';
+    ecgAlert.style.color = '#a4f0d8';
+  }
+
+  // 7-day plan
+  let days = '';
+  for (let i = 0; i < 7; i++) {
+    const p = plan(i);
+    if (!p.length) break;
+    const d = new Date(); d.setDate(d.getDate() + i);
+    days += `<div class="day"><div class="day-label">${i === 0 ? 'Today (Day 1)' : d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</div><div>` +
+      p.map(x => `<span class="chip">${esc(x.name)} <span>${x.hours}h</span></span>`).join('') + '</div></div>';
+  }
+  $('plan').innerHTML = days || '<p class="empty">Admit subjects to compute the 7-day dynamic rescue plan.</p>';
+}
+
+window.toggleRx = id => {
+  const el = $(id);
+  if (el) el.classList.toggle('active');
+};
+
+$('conf').oninput = e => $('cv').textContent = e.target.value;
+
+$('hours').onchange = async e => {
+  const val = parseFloat(e.target.value) || 4;
+  try {
+    hours = (await api('/settings', 'PUT', { hours: val })).hours;
+  } catch (err) {
+    hours = val;
+    localStorage.setItem('er-hours', hours);
+  }
+  render();
+};
+
+$('add').onclick = async () => {
+  const name = $('name').value.trim(), date = $('date').value;
+  if (!name || !date) { alert('Enter subject name and exam date.'); return; }
+  const conf = +$('conf').value;
+  try {
+    const s = await api('/subjects', 'POST', { name, date, conf });
+    subjects.push(s);
+  } catch (err) {
+    subjects.push({ id: Date.now(), name, date, conf });
+    localStorage.setItem('er-subjects', JSON.stringify(subjects));
+  }
+  $('name').value = '';
+  render();
+};
+
+$('board').onclick = async e => {
+  const id = e.target.dataset.del;
+  if (!id) return;
+  try {
+    await api('/subjects/' + id, 'DELETE');
+    subjects = subjects.filter(s => String(s.id) !== id);
+  } catch (err) {
+    subjects = subjects.filter(s => String(s.id) !== id);
+    localStorage.setItem('er-subjects', JSON.stringify(subjects));
+  }
+  render();
+};
+
+// 1-Click Demo Ward for Hackathon Evaluators
+$('loadDemo').onclick = async () => {
+  const now = new Date();
+  const fmt = offsetDays => {
+    const d = new Date(); d.setDate(now.getDate() + offsetDays);
+    return d.toISOString().split('T')[0];
+  };
+
+  const samplePatients = [
+    { name: 'Advanced Engineering Maths', date: fmt(1), conf: 1 },
+    { name: 'Distributed Systems & Cloud', date: fmt(3), conf: 2 },
+    { name: 'Database Management Systems', date: fmt(5), conf: 3 },
+    { name: 'Technical Communications', date: fmt(8), conf: 4 }
+  ];
+
+  for (const s of samplePatients) {
+    try {
+      const added = await api('/subjects', 'POST', s);
+      subjects.push(added);
+    } catch (e) {
+      subjects.push({ id: Date.now() + Math.random(), ...s });
+    }
+  }
+  localStorage.setItem('er-subjects', JSON.stringify(subjects));
+  render();
+};
+
+// Reset Ward
+$('clearAll').onclick = async () => {
+  if (!confirm('Discharge all patients and reset ward?')) return;
+  for (const s of [...subjects]) {
+    try { await api('/subjects/' + s.id, 'DELETE'); } catch (e) {}
+  }
+  subjects = [];
+  localStorage.removeItem('er-subjects');
+  render();
+};
+
+// ICU Crash Cart Pomodoro Countdown
+let timerInterval = null, secondsLeft = 25 * 60;
+$('icuBtn').onclick = () => {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    $('icuBtn').textContent = 'Resume Session';
+    $('icuBtn').style.background = '#e5a02d';
+  } else {
+    $('icuBtn').textContent = 'Pause Session';
+    $('icuBtn').style.background = '#d64545';
+    timerInterval = setInterval(() => {
+      secondsLeft--;
+      if (secondsLeft <= 0) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        alert('🚨 ICU Focus Sprint Completed! Check vitals and rest 5 minutes.');
+        secondsLeft = 25 * 60;
+        $('icuBtn').textContent = 'Start Session';
+        $('icuBtn').style.background = '#2f9e6b';
+      }
+      const m = String(Math.floor(secondsLeft / 60)).padStart(2, '0');
+      const s = String(secondsLeft % 60).padStart(2, '0');
+      $('icuTimer').textContent = `${m}:${s}`;
+    }, 1000);
+  }
+};
+$('icuReset').onclick = () => {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  secondsLeft = 25 * 60;
+  $('icuTimer').textContent = '25:00';
+  $('icuBtn').textContent = 'Start Session';
+  $('icuBtn').style.background = '#2f9e6b';
+};
+
+load();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
