@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Exam ER</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f6b66">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+:root{--bg:#f3f7f6;--ink:#12302e;--line:#d3e0dd;--red:#d64545;--amber:#e5a02d;--green:#2f9e6b;--teal:#0f6b66}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 "Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:var(--teal);color:#fff;padding:20px 24px}
+h1{margin:0;font-size:28px}
+header p{margin:4px 0 0;opacity:.85}
+main{max-width:920px;margin:0 auto;padding:20px;display:grid;gap:20px}
+section{background:#fff;border:1px solid var(--line);border-radius:10px;padding:18px}
+h2{margin:0 0 12px;font-size:18px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+label{display:grid;gap:4px;font-size:14px}
+input{padding:8px;border:1px solid var(--line);border-radius:6px;font:inherit}
+button{padding:9px 16px;border:0;border-radius:6px;background:var(--teal);color:#fff;font:inherit;cursor:pointer}
+button.ghost{background:#e6eeec;color:var(--ink);padding:4px 10px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--amber)}
+.empty{color:#5d7a77}
+.card{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-left:8px solid var(--green);border-radius:8px;margin-bottom:10px}
+.card.Critical{border-left-color:var(--red)}
+.card.Serious{border-left-color:var(--amber)}
+.card b{font-size:17px}
+.meta{font-size:14px;color:#4a6764}
+.tag{font-weight:600}
+.Critical .tag{color:var(--red)}
+.Serious .tag{color:#a86f0a}
+.Stable .tag{color:var(--green)}
+.panic{display:flex;align-items:center;gap:16px}
+.panic .num{font-size:44px;font-weight:700;min-width:90px}
+.bar{flex:1;height:14px;background:#e6eeec;border-radius:7px;overflow:hidden}
+.bar i{display:block;height:100%}
+.day{padding:8px 0;border-top:1px solid var(--line)}
+.chip{display:inline-block;margin:2px 6px 2px 0;padding:2px 10px;border-radius:12px;background:#e6eeec;font-size:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Exam ER</h1>
+  <p>Find out which exam needs treatment first.</p>
+</header>
+<main>
+  <section>
+    <h2>Admit a subject</h2>
+    <div class="row">
+      <label>Subject <input id="name" placeholder="e.g. Maths"></label>
+      <label>Exam date <input id="date" type="date"></label>
+      <label>Confidence: <span id="cv">3</span>/5 <input id="conf" type="range" min="1" max="5" value="3"></label>
+      <button id="add">Add subject</button>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <label>Free study hours per day <input id="hours" type="number" min="1" max="16" step="0.5" style="width:120px"></label>
+    </div>
+  </section>
+
+  <section>
+    <h2>Panic score</h2>
+    <div class="panic"><div class="num" id="pnum">0</div><div class="bar"><i id="pbar"></i></div></div>
+    <p class="meta" id="pmsg">Add a subject to see how urgent things are.</p>
+  </section>
+
+  <section>
+    <h2>Triage board</h2>
+    <div id="board"></div>
+  </section>
+
+  <section>
+    <h2>7-day rescue plan</h2>
+    <div id="plan"></div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let subjects = [], hours = 4;
+
+let clientId = localStorage.getItem('er-client');
+if (!clientId) {
+  clientId = Date.now() + '-' + Math.random().toString(36).slice(2);
+  localStorage.setItem('er-client', clientId);
+}
+
+async function api(path, method = 'GET', body) {
+  const res = await fetch('/api' + path, {
+    method,
+    headers: { 'Content-Type': 'application/json', 'X-Client': clientId },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Request failed');
+  return res.status === 204 ? null : res.json();
+}
+
+async function load() {
+  try {
+    subjects = await api('/subjects');
+    hours = (await api('/settings')).hours;
+    $('hours').value = hours;
+  } catch (e) { alert('Could not reach the server. Start it with: python app.py'); }
+  render();
+}
+
+function daysLeft(s, offset = 0) {
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  return Math.round((new Date(s.date + 'T00:00') - t) / 864e5) - offset;
+}
+const urgency = (s, offset = 0) => (6 - s.conf) / Math.max(1, daysLeft(s, offset));
+const level = u => u > 1 ? 'Critical' : u > 0.4 ? 'Serious' : 'Stable';
+
+function plan(offset) {
+  const active = subjects.filter(s => daysLeft(s, offset) >= 0).map(s => ({ ...s, u: urgency(s, offset) }));
+  const total = active.reduce((sum, s) => sum + s.u, 0);
+  return active.map(s => ({ name: s.name, hours: +(hours * s.u / total).toFixed(1) }));
+}
+
+function render() {
+  const upcoming = subjects.filter(s => daysLeft(s) >= 0);
+  const ranked = upcoming.map(s => ({ ...s, u: urgency(s), d: daysLeft(s) })).sort((a, b) => b.u - a.u);
+  const todayPlan = plan(0);
+
+  $('board').innerHTML = ranked.length ? ranked.map(s => {
+    const lv = level(s.u), h = (todayPlan.find(p => p.name === s.name) || {}).hours || 0;
+    return `<div class="card ${lv}"><div><b>${esc(s.name)}</b><div class="meta">${s.d === 0 ? 'Exam today' : s.d + ' day' + (s.d > 1 ? 's' : '') + ' left'}, confidence ${s.conf}/5, study ${h}h today</div></div>
+      <div><span class="tag">${lv}</span> <button class="ghost" data-del="${s.id}" aria-label="Remove ${esc(s.name)}">Discharge</button></div></div>`;
+  }).join('') : '<p class="empty">No patients yet. Add a subject above.</p>';
+
+  const panic = ranked.length ? Math.round(100 * ranked.reduce((sum, s) => sum + Math.min(1, s.u / 1.5), 0) / ranked.length) : 0;
+  $('pnum').textContent = panic;
+  const bar = $('pbar');
+  bar.style.width = panic + '%';
+  bar.style.background = panic > 66 ? 'var(--red)' : panic > 33 ? 'var(--amber)' : 'var(--green)';
+  $('pmsg').textContent = !ranked.length ? 'Add a subject to see how urgent things are.'
+    : panic > 66 ? 'Code red. Start with ' + ranked[0].name + ' right now.'
+    : panic > 33 ? 'Manageable if you follow the plan.' : 'You are in good shape. Keep the routine.';
+
+  let days = '';
+  for (let i = 0; i < 7; i++) {
+    const p = plan(i);
+    if (!p.length) break;
+    const d = new Date(); d.setDate(d.getDate() + i);
+    days += `<div class="day"><b>${i === 0 ? 'Today' : d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' })}</b><br>` +
+      p.map(x => `<span class="chip">${esc(x.name)} ${x.hours}h</span>`).join('') + '</div>';
+  }
+  $('plan').innerHTML = days || '<p class="empty">Your plan will appear here.</p>';
+}
+
+$('conf').oninput = e => $('cv').textContent = e.target.value;
+
+$('hours').onchange = async e => {
+  try { hours = (await api('/settings', 'PUT', { hours: parseFloat(e.target.value) || 4 })).hours; }
+  catch (err) { alert(err.message); }
+  render();
+};
+
+$('add').onclick = async () => {
+  const name = $('name').value.trim(), date = $('date').value;
+  if (!name || !date) { alert('Enter a subject name and an exam date.'); return; }
+  try {
+    subjects.push(await api('/subjects', 'POST', { name, date, conf: +$('conf').value }));
+    $('name').value = '';
+  } catch (err) { alert(err.message); }
+  render();
+};
+
+$('board').onclick = async e => {
+  const id = e.target.dataset.del;
+  if (!id) return;
+  try {
+    await api('/subjects/' + id, 'DELETE');
+    subjects = subjects.filter(s => String(s.id) !== id);
+  } catch (err) { alert(err.message); }
+  render();
+};
+
+load();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>
